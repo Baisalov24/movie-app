@@ -4,27 +4,18 @@ const API_URL_POPULAR =
 const API_URL_SEARCH =
   "https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=";
 
-  getMovies(API_URL_POPULAR);
+getMovies(API_URL_POPULAR);
 
 async function getMovies(url) {
-  const resp = await fetch(url);
+  const resp = await fetch(url, {
+    headers: {
+      "Content-Type": "aplication/json",
+      "X-API-KEY": API_KEY,
+    },
+  });
   const respData = await resp.json();
-  showMovies(respData.results);
-}
 
-async function getMovieGenre(ids) {
-  const resp = await fetch(API_URL_GENRES);
-  const respData = await resp.json();
-
-  let result = [];
-  for (const [, value] of Object.entries(respData.genres)) {
-    ids.map((el) => {
-      if (el === value.id) {
-        result.push(value.name);
-      }
-    });
-  }
-  return result.join(", ");
+  showMovies(respData);
 }
 
 function getClassByRate(vote) {
@@ -37,28 +28,42 @@ function getClassByRate(vote) {
   }
 }
 
-function showMovies(movies) {
+function showMovies(data) {
   const moviesEl = document.querySelector(".movies");
-  movies.forEach(async (movie) => {
+
+  // clean the preveous movies
+  document.querySelector(".movies").innerHTML = "";
+
+  data.films.forEach(async (movie) => {
     const movieEl = document.createElement("div");
     movieEl.classList.add("movie");
     movieEl.innerHTML = `
         <div class="movie__cover-inner">
-          <img src="https://image.tmdb.org/t/p/w500/${
-            movie.poster_path
-          }" class="movie__cover" alt="Годзилла против Конга">
-          <div class="movie__cover--darkened"></div>
+        ${`<img src="${movie.posterUrlPreview}" class="movie__cover" alt=${movie.nameRu}>`}
+        <div class="movie__cover--darkened"></div>
         </div>
         <div class="movie__info">
-          <div class="movie__title">${movie.title}</div>
-          <div class="movie__category">${await getMovieGenre(
-            movie.genre_ids
+        <div class="movie__title">${movie.nameRu}</div>
+          <div class="movie__category">${movie.genres.map(
+            (genre) => ` ${genre.genre}`
           )}</div>
           <div class="movie__average movie__average--${getClassByRate(
-            movie.vote_average
-          )}">${movie.vote_average}</div> 
+            movie.rating
+          )}">${movie.rating}</div> 
         </div>
       `;
     moviesEl.appendChild(movieEl);
   });
 }
+const form = document.querySelector("form");
+const search = document.querySelector(".header__search");
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const apiSearchUrl = `${API_URL_SEARCH}${search.value}`;
+  if (search.value) {
+    getMovies(apiSearchUrl);
+
+    search.value = "";
+  }
+});
